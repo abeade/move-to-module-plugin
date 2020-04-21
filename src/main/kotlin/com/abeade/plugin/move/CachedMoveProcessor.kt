@@ -8,7 +8,7 @@ import com.intellij.refactoring.move.MoveCallback
 import com.intellij.refactoring.move.moveFilesOrDirectories.MoveFilesOrDirectoriesProcessor
 import com.intellij.usageView.UsageInfo
 
-internal class MoveProcessor(
+internal class CachedMoveProcessor(
     project: Project?,
     elements: Array<PsiElement?>?,
     newParent: PsiDirectory?,

@@ -24,6 +24,11 @@ import javax.swing.JPanel
 
 internal abstract class BaseAction : AnAction() {
 
+    private companion object {
+
+        private const val RES_DIRECTORY = "res"
+    }
+
     private var currentModule: Module? = null
     private var targetModule: Module? = null
 
@@ -49,7 +54,7 @@ internal abstract class BaseAction : AnAction() {
             return
         }
         // Disable when less than 2 modules
-        val moduleList = getModuleList(project)
+        val moduleList = project.moduleList
         if (moduleList.size < 2) {
             presentation.isEnabled = false
             return
@@ -60,11 +65,26 @@ internal abstract class BaseAction : AnAction() {
             presentation.isEnabled = false
             return
         }
+        // Disable when any directory not in resources folder
+        if (selectedFileQueue.all { it.isDirectory } && selectedFileQueue.any { it.parent?.name != RES_DIRECTORY }) {
+            presentation.isEnabled = false
+            return
+        }
+        // Disable when any file not in resources folder
+        if (selectedFileQueue.all { !it.isDirectory } && selectedFileQueue.any { it.parent?.parent?.name != RES_DIRECTORY }) {
+            presentation.isEnabled = false
+            return
+        }
+        // Disable when mixing directories and files
+        if (selectedFileQueue.any { !it.isDirectory } && selectedFileQueue.any { it.isDirectory }) {
+            presentation.isEnabled = false
+            return
+        }
         // Disable when selected file not located in same module
         for (module in moduleList) {
             var hasMatch = false
             for (file in selectedFileQueue) {
-                if (file.path.startsWith(getModulePath(module))) {
+                if (file.path.startsWith(module.modulePath)) {
                     hasMatch = true
                 } else if (hasMatch) {
                     presentation.isEnabled = false
@@ -77,14 +97,10 @@ internal abstract class BaseAction : AnAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        val moduleList = getModuleList(project)
+        val moduleList = project.moduleList
         val selectedFileQueue = getSelectedFileQueue(event.dataContext)
-        for (module in moduleList) {
-            val modulePath = getModulePath(module)
-            selectedFileQueue.firstOrNull { it.path.startsWith(modulePath) }?.let {
-                currentModule = module
-            }
-        }
+        val filePath = selectedFileQueue.first().path
+        currentModule = moduleList.first { filePath.startsWith(it.modulePath) }
         DialogBuilder()
             .title(provideDialogTitleText())
             .centerPanel(
@@ -100,21 +116,16 @@ internal abstract class BaseAction : AnAction() {
                     onDialogActionOkInvoked(
                         project,
                         selectedFileQueue,
-                        getModulePath(currentModule!!),
-                        getModulePath(targetModule!!)
+                        currentModule!!.modulePath,
+                        targetModule!!.modulePath
                     )
                 }
                 show()
             }
     }
 
-    private fun getModuleList(project: Project): MutableList<Module> {
-        val modules = ModuleManager.getInstance(project).modules
-        return modules.filterNot { it.name == project.name }.toMutableList()
-    }
-
     private fun buildComboBoxOfModuleList(project: Project): ComboBox<String> {
-        val moduleList = getModuleList(project)
+        val moduleList = project.moduleList
         moduleList.remove(currentModule)
         val comboBox = ComboBox<String>()
         moduleList
@@ -135,8 +146,6 @@ internal abstract class BaseAction : AnAction() {
         return comboBox
     }
 
-    private fun getModulePath(module: Module): String = "${module.project.basePath}/${module.name}"
-
     private fun getSelectedFileQueue(context: DataContext): Queue<VirtualFile> {
         val files = VIRTUAL_FILE_ARRAY.getData(context)
         return LinkedList(if (files != null) listOf(*files) else emptyList())
@@ -152,7 +161,7 @@ internal abstract class BaseAction : AnAction() {
         WriteAction.compute<PsiDirectory, RuntimeException> {
             try {
                 return@compute DirectoryUtil.mkdirs(PsiManager.getInstance(project), path)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 return@compute null
             }
         }
@@ -168,4 +177,10 @@ internal abstract class BaseAction : AnAction() {
     fun showErrorHint(project: Project, title: String, message: String) {
         CommonRefactoringUtil.showErrorHint(project, null, title, message, null)
     }
+
+    private val Module.modulePath: String
+        get() = "${project.basePath}/${name}"
+
+    private val Project.moduleList: MutableList<Module>
+        get() = ModuleManager.getInstance(this).modules.filterNot { it.name == name }.toMutableList()
 }

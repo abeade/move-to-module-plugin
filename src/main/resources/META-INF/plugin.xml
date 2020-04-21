@@ -7,10 +7,10 @@
         <h1>Move resources</h1>
         <p><a href="https://github.com/mthli/Nongfu">GitHub</a> | <a href="https://github.com/mthli/Nongfu/issues">Issues</a></p>
         <br />
-        <p>A IntelliJ IDEA plugin that allows to move files or directories between modules.</p>
+        <p>A IntelliJ IDEA plugin that allows to move resource files or directories between modules.</p>
         <br />
-        <p><b>Usage:</b> Refactor → Move to Module...</p>
-        <p><b>Keymap:</b> Control(Command) + Shift + X</p>
+        <p><b>Usage: </b>Refactor → Move to Module...</p>
+        <p><b>Keymap: </b>Control(Command) + Shift + X</p>
         <br />
     ]]></description>
 
@@ -23,10 +23,10 @@
     </extensions>
 
     <actions>
-        <action id="com.abeade.plugin.move.MoveToModule"
-                class="com.abeade.plugin.move.MoveToModule"
+        <action id="com.abeade.plugin.move.MoveToModuleAction"
+                class="com.abeade.plugin.move.MoveToModuleAction"
                 text="Move to Module..."
-                description="Move file to selected module">
+                description="Move resource to selected module">
             <add-to-group group-id="RefactoringMenu" anchor="after" relative-to-action="Move" />
             <keyboard-shortcut first-keystroke="control shift X" keymap="$default" />
         </action>

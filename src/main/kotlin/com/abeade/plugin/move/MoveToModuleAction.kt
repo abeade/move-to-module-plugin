@@ -9,14 +9,14 @@ import com.intellij.refactoring.move.MoveCallback
 import com.intellij.refactoring.move.MoveHandler
 import java.util.*
 
-internal class MoveToModule : BaseAction() {
+internal class MoveToModuleAction : BaseAction() {
 
     private companion object {
 
         private const val ERROR_HINT_TITLE = "Move Failed"
     }
 
-    private var moveProcessor: MoveProcessor? = null
+    private var moveProcessor: CachedMoveProcessor? = null
     private var cachedReferenceList: List<PsiReference> = emptyList()
 
     override fun isEnable(event: AnActionEvent): Boolean {
@@ -25,7 +25,7 @@ internal class MoveToModule : BaseAction() {
         return elements.all { MoveHandler.canMove(arrayOf(it), null) }
     }
 
-    override fun provideDialogTitleText(): String = "Move to Module"
+    override fun provideDialogTitleText(): String = "Move resources to module"
 
     override fun provideDialogActionOkText(): String = "Move"
 
@@ -74,14 +74,14 @@ internal class MoveToModule : BaseAction() {
                         matchAllCacheReferences = false
                         break
                     }
-                } catch (t: Throwable) {
+                } catch (_: Throwable) {
                     matchAllCacheReferences = false
                     break
                 }
             }
             shouldCheckReferences = !matchAllCacheReferences
         }
-        moveProcessor = MoveProcessor(
+        moveProcessor = CachedMoveProcessor(
             project,
             arrayOf(currentPsiElement),
             targetPsiDirectory,

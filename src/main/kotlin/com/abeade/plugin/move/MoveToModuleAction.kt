@@ -3,7 +3,7 @@ package com.abeade.plugin.move
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiReference
+import com.intellij.psi.PsiElement
 import com.intellij.refactoring.actions.BaseRefactoringAction
 import com.intellij.refactoring.move.MoveCallback
 import com.intellij.refactoring.move.MoveHandler
@@ -17,7 +17,6 @@ internal class MoveToModuleAction : BaseAction() {
     }
 
     private var moveProcessor: CachedMoveProcessor? = null
-    private var cachedReferenceList: List<PsiReference> = emptyList()
 
     override fun isEnable(event: AnActionEvent): Boolean {
         // If every single PsiElement can move, then return true
@@ -31,72 +30,49 @@ internal class MoveToModuleAction : BaseAction() {
 
     override fun onDialogActionOkInvoked(
         project: Project,
-        queue: Queue<VirtualFile>,
+        queue: Queue<List<VirtualFile>>,
         currentModulePath: String,
         targetModulePath: String
     ) {
-        val currentVirtualFile = queue.poll() ?: return
-        val targetDirectoryPath = currentVirtualFile.parent.path.replace(currentModulePath, targetModulePath)
+        val currentVirtualFiles = queue.poll() ?: return
+        val targetDirectoryPath = currentVirtualFiles.first().parent.path.replace(currentModulePath, targetModulePath)
         val targetPsiDirectory = mkdirs(project, targetDirectoryPath)
         if (targetPsiDirectory == null) {
             showErrorHint(
                 project,
                 ERROR_HINT_TITLE,
-                "targetPsiDirectory null, path: " + currentVirtualFile.path
+                "targetPsiDirectory null, path: " + currentVirtualFiles.first().path
             )
             onDialogActionOkInvoked(project, queue, currentModulePath, targetModulePath)
             return
         }
-        val currentPsiElement = if (currentVirtualFile.isDirectory) {
-            findPsiDirectory(project, currentVirtualFile)
+        val currentPsiElement: Array<PsiElement?> = if (currentVirtualFiles.first().isDirectory) {
+            arrayOf(findPsiDirectory(project, currentVirtualFiles.first()))
         } else {
-            findPsiFile(project, currentVirtualFile)
+            findPsiFiles(project, currentVirtualFiles).toTypedArray()
         }
-        if (currentPsiElement == null) {
+        if (currentPsiElement.contains(null)) {
             showErrorHint(
                 project,
                 ERROR_HINT_TITLE,
-                "currentPsiElement null, path: " + currentVirtualFile.path
+                "currentPsiElement null, path: " + currentVirtualFiles.first().path
             )
             onDialogActionOkInvoked(project, queue, currentModulePath, targetModulePath)
             return
         }
-
-        // Little trick, avoid redundant check
-        val shouldCheckReferences: Boolean
-        if (cachedReferenceList.isEmpty()) {
-            shouldCheckReferences = true
-        } else {
-            var matchAllCacheReferences = true
-            for (reference in cachedReferenceList) {
-                try {
-                    if (!reference.isReferenceTo(currentPsiElement)) {
-                        matchAllCacheReferences = false
-                        break
-                    }
-                } catch (_: Throwable) {
-                    matchAllCacheReferences = false
-                    break
-                }
-            }
-            shouldCheckReferences = !matchAllCacheReferences
-        }
         moveProcessor = CachedMoveProcessor(
             project,
-            arrayOf(currentPsiElement),
+            currentPsiElement,
             targetPsiDirectory,
-            shouldCheckReferences,
-            shouldCheckReferences,
-            shouldCheckReferences,
+                true,
+                true,
+                true,
             MoveCallback {
-                if (shouldCheckReferences) {
-                    cachedReferenceList = moveProcessor?.cachedReferenceList ?: emptyList()
-                }
                 invokeLater(project, Runnable { onDialogActionOkInvoked(project, queue, currentModulePath, targetModulePath) })
             }
         ).apply {
             setPrepareSuccessfulSwingThreadCallback(null)
-            setPreviewUsages(shouldCheckReferences && currentVirtualFile.isWritable)
+            setPreviewUsages(true)
             run()
         }
     }

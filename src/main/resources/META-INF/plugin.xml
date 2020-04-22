@@ -9,7 +9,7 @@
         <br />
         <p>A IntelliJ IDEA plugin that allows to move resource files or directories between modules.</p>
         <br />
-        <p><b>Usage: </b>Refactor → Move to Module...</p>
+        <p><b>Usage: </b>Refactor → Move Resource to Module...</p>
         <p><b>Keymap: </b>Control(Command) + Shift + X</p>
         <br />
     ]]></description>
@@ -25,7 +25,7 @@
     <actions>
         <action id="com.abeade.plugin.move.MoveToModuleAction"
                 class="com.abeade.plugin.move.MoveToModuleAction"
-                text="Move to Module..."
+                text="Move Resource to Module..."
                 description="Move resource to selected module">
             <add-to-group group-id="RefactoringMenu" anchor="after" relative-to-action="Move" />
             <keyboard-shortcut first-keystroke="control shift X" keymap="$default" />

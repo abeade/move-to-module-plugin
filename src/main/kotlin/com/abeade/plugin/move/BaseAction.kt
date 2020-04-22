@@ -14,6 +14,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogBuilder
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiFile
@@ -39,10 +40,10 @@ internal abstract class BaseAction : AnAction() {
     abstract fun provideDialogActionOkText(): String
 
     abstract fun onDialogActionOkInvoked(
-        project: Project,
-        queue: Queue<VirtualFile>,
-        currentModulePath: String,
-        targetModulePath: String
+            project: Project,
+            queue: Queue<List<VirtualFile>>,
+            currentModulePath: String,
+            targetModulePath: String
     )
 
     override fun update(event: AnActionEvent) {
@@ -59,9 +60,9 @@ internal abstract class BaseAction : AnAction() {
             presentation.isEnabled = false
             return
         }
-        // Disable when no selected file
-        val selectedFileQueue = getSelectedFileQueue(event.dataContext)
-        if (selectedFileQueue.isEmpty()) {
+        // Disable when no selected data
+        val selectedFileQueue = VIRTUAL_FILE_ARRAY.getData(event.dataContext)
+        if (selectedFileQueue.isNullOrEmpty()) {
             presentation.isEnabled = false
             return
         }
@@ -99,7 +100,7 @@ internal abstract class BaseAction : AnAction() {
         val project = event.project ?: return
         val moduleList = project.moduleList
         val selectedFileQueue = getSelectedFileQueue(event.dataContext)
-        val filePath = selectedFileQueue.first().path
+        val filePath = selectedFileQueue.first().first().path
         currentModule = moduleList.first { filePath.startsWith(it.modulePath) }
         DialogBuilder()
             .title(provideDialogTitleText())
@@ -125,7 +126,7 @@ internal abstract class BaseAction : AnAction() {
     }
 
     private fun buildComboBoxOfModuleList(project: Project): ComboBox<String> {
-        val moduleList = project.moduleList
+        val moduleList = project.moduleList.sortedBy { it.name }.toMutableList()
         moduleList.remove(currentModule)
         val comboBox = ComboBox<String>()
         moduleList
@@ -146,13 +147,49 @@ internal abstract class BaseAction : AnAction() {
         return comboBox
     }
 
-    private fun getSelectedFileQueue(context: DataContext): Queue<VirtualFile> {
+    private fun getSelectedFileQueue(context: DataContext): Queue<List<VirtualFile>> {
         val files = VIRTUAL_FILE_ARRAY.getData(context)
-        return LinkedList(if (files != null) listOf(*files) else emptyList())
+        val filesByFolder = mutableMapOf<VirtualFile, MutableSet<VirtualFile>>()
+        return if (files?.first()?.isDirectory == false) {
+            files.forEach {
+                filesByFolder.addFile(it)
+            }
+            filesByFolder.keys.forEach { folder ->
+                // Add same resource in qualified folders
+                val noQualifiedName = folder.name.substringBefore('-')
+                val childs = VfsUtil.getChildren(folder.parent).filter { child ->
+                            child != folder && child.name.substringBefore('-') == noQualifiedName
+                        }
+                filesByFolder[folder]!!.forEach { file ->
+                    childs.forEach { childFolder ->
+                        val childFile = childFolder.findChild(file.name)
+                        childFile?.let { filesByFolder.addFile(it) }
+                    }
+                }
+            }
+            LinkedList<List<VirtualFile>>().apply {
+                filesByFolder.forEach { this.add(it.value.toList()) }
+            }
+        } else {
+            LinkedList<List<VirtualFile>>().apply {
+                add(LinkedList(if (files != null) listOf(*files) else emptyList()))
+            }
+        }
+    }
+
+    private fun MutableMap<VirtualFile, MutableSet<VirtualFile>>.addFile(file: VirtualFile) {
+        if (containsKey(file.parent)) {
+            this[file.parent]?.add(file)
+        } else {
+            this[file.parent] = mutableSetOf(file)
+        }
     }
 
     fun findPsiFile(project: Project, file: VirtualFile): PsiFile? =
         PsiManager.getInstance(project).findFile(file)
+
+    fun findPsiFiles(project: Project, files: List<VirtualFile>): List<PsiFile?> =
+        files.map { findPsiFile(project, it) }
 
     fun findPsiDirectory(project: Project, file: VirtualFile): PsiDirectory? =
         PsiManager.getInstance(project).findDirectory(file)

@@ -1,13 +1,13 @@
 <idea-plugin>
     <id>com.abeade.plugin.move.resources</id>
-    <name>Move resources</name>
+    <name>Move resources to module</name>
     <vendor email="albert.beade@letgo.com" url="https://github.com/abeade">Albert Beade</vendor>
 
     <description><![CDATA[
-        <h1>Move resources</h1>
-        <p><a href="https://github.com/mthli/Nongfu">GitHub</a> | <a href="https://github.com/mthli/Nongfu/issues">Issues</a></p>
+        <h1>Move resources to module</h1>
+        <p><a href=https://github.com/abeade/move-to-module-plugin">GitHub</a></p>
         <br />
-        <p>A IntelliJ IDEA plugin that allows to move resource files or directories between modules.</p>
+        <p>A IntelliJ IDEA plugin that allows to move Android resource files or directories between modules.</p>
         <br />
         <p><b>Usage: </b>Refactor → Move Resource to Module...</p>
         <p><b>Keymap: </b>Control(Command) + Shift + X</p>

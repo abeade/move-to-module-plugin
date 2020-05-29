@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'com.abeade.plugin.move'
-version '0.1'
+version '0.2'
 
 repositories {
     mavenCentral()
@@ -17,7 +17,7 @@ dependencies {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version '192.7142.36'
+    version '193.6911.18'
 }
 compileKotlin {
     kotlinOptions.jvmTarget = "1.8"

@@ -9,9 +9,9 @@ import com.intellij.refactoring.move.moveFilesOrDirectories.MoveFilesOrDirectori
 import com.intellij.usageView.UsageInfo
 
 internal class CachedMoveProcessor(
-    project: Project?,
-    elements: Array<PsiElement?>?,
-    newParent: PsiDirectory?,
+    project: Project,
+    elements: Array<PsiElement?>,
+    newParent: PsiDirectory,
     searchForReferences: Boolean,
     searchInComments: Boolean,
     searchInNonJavaFiles: Boolean,
